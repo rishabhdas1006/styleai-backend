@@ -1,20 +1,26 @@
 package main
 
 import (
-	"styleai/internal/database"
-	"styleai/internal/routes"
+	"log"
+
+	"styleai-backend/internal/config"
+	"styleai-backend/internal/database"
+	"styleai-backend/internal/routes"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// connect database
-	database.ConnectDB()
+
+	cfg := config.LoadConfig()
+
+	database.ConnectDB(cfg)
 
 	r := gin.Default()
 
-	// register routes
 	routes.RegisterRoutes(r)
+
+	log.Println("Server running on port", cfg.Server.Port)
 
 	r.Run(":8080")
 }
