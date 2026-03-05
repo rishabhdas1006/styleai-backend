@@ -1,0 +1,66 @@
+# =========================
+# Go build artifacts
+# =========================
+bin/
+build/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# =========================
+# Go modules
+# =========================
+vendor/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editor
+# =========================
+
+# VS Code
+.vscode/
+
+# GoLand / IntelliJ
+.idea/
+
+# Vim
+*.swp
+
+# =========================
+# Local config overrides
+# =========================
+configs/config.local.yaml
+configs/config.*.local.yaml
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+
+# =========================
+# Coverage reports
+# =========================
+coverage.out
