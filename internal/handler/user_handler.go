@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	appErrors "styleai-backend/internal/common"
 	"styleai-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -41,7 +42,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	user, err := h.UserService.Register(req.Name, req.Email, req.Password)
 
 	if err != nil {
-		if err.Error() == "email already exists" {
+		if err.Error() == appErrors.ErrEmailExists.Error() {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": err.Error(),
 			})

@@ -1,7 +1,7 @@
 package service
 
 import (
-	"errors"
+	appErrors "styleai-backend/internal/common"
 	"styleai-backend/internal/models"
 	"styleai-backend/internal/repository"
 
@@ -22,7 +22,7 @@ func (s *UserService) Register(name string, email string, password string) (*mod
 	existingUser, _ := s.UserRepo.GetUserByEmail(email)
 
 	if existingUser != nil {
-		return nil, errors.New("email already exists")
+		return nil, appErrors.ErrEmailExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 14)
@@ -48,12 +48,12 @@ func (s *UserService) Register(name string, email string, password string) (*mod
 func (s *UserService) Login(email string, password string) (*models.User, error) {
 	user, err := s.UserRepo.GetUserByEmail(email)
 	if err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, appErrors.ErrEmailNotFound
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, appErrors.ErrInvalidCredentials
 	}
 
 	return user, nil
