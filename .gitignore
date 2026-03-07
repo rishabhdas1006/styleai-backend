@@ -29,6 +29,10 @@ logs/
 .env
 .env.*
 
+configs/config.dev.yaml
+configs/config.prod.yaml
+.env
+
 # =========================
 # OS files
 # =========================
