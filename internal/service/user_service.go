@@ -1,20 +1,23 @@
 package service
 
 import (
-	appErrors "styleai-backend/internal/common"
+	"styleai-backend/internal/common"
 	"styleai-backend/internal/models"
 	"styleai-backend/internal/repository"
+	"styleai-backend/pkg/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
-	UserRepo *repository.UserRepository
+	UserRepo  *repository.UserRepository
+	JWTSecret string
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
+func NewUserService(repo *repository.UserRepository, secret string) *UserService {
 	return &UserService{
-		UserRepo: repo,
+		UserRepo:  repo,
+		JWTSecret: secret,
 	}
 }
 
@@ -22,7 +25,7 @@ func (s *UserService) Register(name string, email string, password string) (*mod
 	existingUser, _ := s.UserRepo.GetUserByEmail(email)
 
 	if existingUser != nil {
-		return nil, appErrors.ErrEmailExists
+		return nil, common.ErrEmailExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 14)
@@ -45,16 +48,21 @@ func (s *UserService) Register(name string, email string, password string) (*mod
 	return user, nil
 }
 
-func (s *UserService) Login(email string, password string) (*models.User, error) {
+func (s *UserService) Login(email string, password string) (string, error) {
 	user, err := s.UserRepo.GetUserByEmail(email)
 	if err != nil {
-		return nil, appErrors.ErrEmailNotFound
+		return "", common.ErrEmailNotFound
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return nil, appErrors.ErrInvalidCredentials
+		return "", common.ErrInvalidCredentials
 	}
 
-	return user, nil
+	token, err := utils.GenerateToken(user.ID, s.JWTSecret)
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }

@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	appErrors "styleai-backend/internal/common"
+	"styleai-backend/internal/common"
 	"styleai-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +42,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	user, err := h.UserService.Register(req.Name, req.Email, req.Password)
 
 	if err != nil {
-		if err.Error() == appErrors.ErrEmailExists.Error() {
+		if err.Error() == common.ErrEmailExists.Error() {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": err.Error(),
 			})
@@ -72,16 +72,16 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.UserService.Login(req.Email, req.Password)
+	token, err := h.UserService.Login(req.Email, req.Password)
 
 	if err != nil {
-		if err.Error() == appErrors.ErrEmailNotFound.Error() {
+		if err.Error() == common.ErrEmailNotFound.Error() {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
-		if err.Error() == appErrors.ErrInvalidCredentials.Error() {
+		if err.Error() == common.ErrInvalidCredentials.Error() {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
@@ -94,6 +94,6 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{
-		"user_id": user.ID,
+		"token": token,
 	})
 }

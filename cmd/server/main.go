@@ -18,7 +18,7 @@ func main() {
 
 	r := gin.Default()
 
-	routes.RegisterRoutes(r)
+	routes.RegisterRoutes(r, cfg)
 
 	log.Println("Server running on port", cfg.Server.Port)
 
