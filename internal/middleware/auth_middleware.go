@@ -54,8 +54,10 @@ func AuthMiddleware(secret string) gin.HandlerFunc {
 		}
 
 		userID := uint(claims[common.ContextUserID].(float64))
+		role := claims["role"].(string)
 
 		c.Set(common.ContextUserID, userID)
+		c.Set(common.ContextRole, role)
 
 		c.Next()
 	}

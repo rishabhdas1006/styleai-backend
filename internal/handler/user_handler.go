@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"styleai-backend/internal/common"
 	"styleai-backend/internal/service"
@@ -42,7 +43,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	user, err := h.UserService.Register(req.Name, req.Email, req.Password)
 
 	if err != nil {
-		if err.Error() == common.ErrEmailExists.Error() {
+		if errors.Is(err, common.ErrEmailExists) {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": err.Error(),
 			})
@@ -75,13 +76,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 	token, err := h.UserService.Login(req.Email, req.Password)
 
 	if err != nil {
-		if err.Error() == common.ErrEmailNotFound.Error() {
+		if errors.Is(err, common.ErrEmailNotFound) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
-		if err.Error() == common.ErrInvalidCredentials.Error() {
+		if errors.Is(err, common.ErrInvalidCredentials) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
 			})
@@ -93,7 +94,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusAccepted, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"token": token,
 	})
 }

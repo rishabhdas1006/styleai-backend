@@ -22,7 +22,10 @@ func NewUserService(repo *repository.UserRepository, secret string) *UserService
 }
 
 func (s *UserService) Register(name string, email string, password string) (*models.User, error) {
-	existingUser, _ := s.UserRepo.GetUserByEmail(email)
+	existingUser, err := s.UserRepo.GetUserByEmail(email)
+	if err != nil {
+		return nil, err
+	}
 
 	if existingUser != nil {
 		return nil, common.ErrEmailExists
@@ -51,6 +54,10 @@ func (s *UserService) Register(name string, email string, password string) (*mod
 func (s *UserService) Login(email string, password string) (string, error) {
 	user, err := s.UserRepo.GetUserByEmail(email)
 	if err != nil {
+		return "", err
+	}
+
+	if user == nil {
 		return "", common.ErrEmailNotFound
 	}
 
@@ -59,7 +66,7 @@ func (s *UserService) Login(email string, password string) (string, error) {
 		return "", common.ErrInvalidCredentials
 	}
 
-	token, err := utils.GenerateToken(user.ID, s.JWTSecret)
+	token, err := utils.GenerateToken(user.ID, user.Role, s.JWTSecret)
 	if err != nil {
 		return "", err
 	}

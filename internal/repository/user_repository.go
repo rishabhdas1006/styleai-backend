@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"styleai-backend/internal/models"
 
 	"gorm.io/gorm"
@@ -20,6 +21,16 @@ func (r *UserRepository) CreateUser(user *models.User) error {
 
 func (r *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
+
 	err := r.DB.Where("email = ?", email).First(&user).Error
-	return &user, err
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
 }
