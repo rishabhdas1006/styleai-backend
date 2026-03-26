@@ -46,6 +46,8 @@ func runMigrations() {
 		&models.ProductVariant{},
 		&models.ProductImage{},
 		&models.Category{},
+		&models.Cart{},
+		&models.CartItem{},
 	)
 
 	if err != nil {

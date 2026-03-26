@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"styleai-backend/internal/common"
 	"styleai-backend/internal/models"
 
 	"gorm.io/gorm"
@@ -26,10 +27,15 @@ func (r *VariantRepository) FindByProductID(productID uint) ([]models.ProductVar
 
 func (r *VariantRepository) FindByID(id uint) (*models.ProductVariant, error) {
 	var variant models.ProductVariant
+
 	err := r.db.First(&variant, id).Error
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, common.ErrVariantNotFound
+		}
 		return nil, err
 	}
+
 	return &variant, nil
 }
 

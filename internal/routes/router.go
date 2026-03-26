@@ -34,12 +34,16 @@ func RegisterRoutes(r *gin.Engine, cfg *config.Config) {
 	variantService := service.NewVariantService(variantRepo, productRepo)
 	variantHandler := handler.NewVariantHandler(variantService)
 
-	// Auth
-	auth := r.Group("/auth")
-	{
-		auth.POST("/register", userHandler.Register)
-		auth.POST("/login", userHandler.Login)
-	}
+	cartRepo := repository.NewCartRepository(database.DB)
+	cartService := service.NewCartService(cartRepo, variantRepo)
+	cartHandler := handler.NewCartHandler(cartService)
+
+	api := r.Group("/api/v1")
+
+	RegisterAuthRoutes(api, userHandler, cfg)
+	RegisterProductRoutes(api, productHandler, variantHandler)
+	RegisterCartRoutes(api, cartHandler, cfg)
+	RegisterAdminRoutes(api, categoryHandler, productHandler, variantHandler, cfg)
 
 	// Protected user routes
 	user := r.Group("/user")
@@ -48,33 +52,5 @@ func RegisterRoutes(r *gin.Engine, cfg *config.Config) {
 		user.GET("/profile", func(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "protected route"})
 		})
-	}
-
-	// Public category routes
-	categories := r.Group("/categories")
-	{
-		categories.GET("/:id", categoryHandler.GetCategoryByID)
-	}
-
-	// Public product routes
-	products := r.Group("/products")
-	{
-		products.GET("", productHandler.GetProducts)
-		products.GET("/:id", productHandler.GetProductByID)
-		products.GET("/:id/variants", variantHandler.GetVariants)
-	}
-
-	// Admin routes
-	admin := r.Group("/admin")
-	admin.Use(
-		middleware.AuthMiddleware(cfg.JWT.Secret),
-		middleware.AdminMiddleware(),
-	)
-	{
-		admin.POST("/categories", categoryHandler.CreateCategory)
-		admin.POST("/products", productHandler.CreateProduct)
-		admin.POST("/products/:id/variants", variantHandler.CreateVariant)
-		admin.PUT("/variants/:id", variantHandler.UpdateVariant)
-		admin.DELETE("/variants/:id", variantHandler.DeleteVariant)
 	}
 }
