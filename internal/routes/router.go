@@ -7,6 +7,7 @@ import (
 	"styleai-backend/internal/middleware"
 	"styleai-backend/internal/repository"
 	"styleai-backend/internal/service"
+	"styleai-backend/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,20 +31,31 @@ func RegisterRoutes(r *gin.Engine, cfg *config.Config) {
 	productService := service.NewProductService(productRepo)
 	productHandler := handler.NewProductHandler(productService)
 
+	variantImageRepo := repository.NewVariantImageRepository(database.DB)
+	cloudinaryManager, _ := utils.NewCloudinaryManager()
+
 	variantRepo := repository.NewVariantRepository(database.DB)
-	variantService := service.NewVariantService(variantRepo, productRepo)
+	variantService := service.NewVariantService(variantRepo, variantImageRepo, productRepo, database.DB, cloudinaryManager)
 	variantHandler := handler.NewVariantHandler(variantService)
 
 	cartRepo := repository.NewCartRepository(database.DB)
 	cartService := service.NewCartService(cartRepo, variantRepo)
 	cartHandler := handler.NewCartHandler(cartService)
 
+	orderRepo := repository.NewOrderRepository(database.DB)
+	orderService := service.NewOrderService(cartRepo, orderRepo, variantRepo, database.DB)
+	orderHandler := handler.NewOrderHandler(orderService)
+
+	cloudinaryService := service.NewCloudinaryService()
+	cloudinaryHandler := handler.NewCloudinaryHandler(cloudinaryService)
+
 	api := r.Group("/api/v1")
 
 	RegisterAuthRoutes(api, userHandler, cfg)
 	RegisterProductRoutes(api, productHandler, variantHandler)
 	RegisterCartRoutes(api, cartHandler, cfg)
-	RegisterAdminRoutes(api, categoryHandler, productHandler, variantHandler, cfg)
+	RegisterAdminRoutes(api, categoryHandler, productHandler, variantHandler, cloudinaryHandler, cfg)
+	RegisterOrderRoutes(api, orderHandler, cfg)
 
 	// Protected user routes
 	user := r.Group("/user")

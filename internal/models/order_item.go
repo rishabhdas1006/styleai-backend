@@ -1,15 +1,10 @@
 package models
 
-import "time"
-
-type CartItem struct {
+type OrderItem struct {
 	ID        uint   `gorm:"primaryKey"`
-	CartID    uint   `gorm:"index;not null"`
+	OrderID   uint   `gorm:"index;not null"`
 	VariantID string `gorm:"type:uuid;index;not null"`
 
 	Quantity int     `gorm:"not null"`
 	Price    float64 `gorm:"not null"`
-
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }

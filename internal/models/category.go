@@ -7,5 +7,5 @@ type Category struct {
 	Name      string `gorm:"unique;not null"`
 	CreatedAt time.Time
 
-	Products []Product
+	Products []Product `gorm:"foreignKey:CategoryID"`
 }

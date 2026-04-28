@@ -19,11 +19,18 @@ func NewVariantHandler(service *service.VariantService) *VariantHandler {
 	return &VariantHandler{variantService: service}
 }
 
+type ImageRequest struct {
+	URL      string `json:"url" binding:"required"`
+	PublicID string `json:"public_id" binding:"required"`
+}
+
 type CreateVariantRequest struct {
-	Size  string  `json:"size" binding:"required"`
-	Color string  `json:"color" binding:"required"`
-	Price float64 `json:"price" binding:"required"`
-	Stock int     `json:"stock" binding:"required"`
+	VariantID string         `json:"variantId" binding:"required"`
+	Size      string         `json:"size" binding:"required"`
+	Color     string         `json:"color" binding:"required"`
+	Price     float64        `json:"price" binding:"required"`
+	Stock     int            `json:"stock" binding:"required"`
+	Images    []ImageRequest `json:"images"`
 }
 
 type UpdateVariantRequest struct {
@@ -32,7 +39,6 @@ type UpdateVariantRequest struct {
 }
 
 func (h *VariantHandler) CreateVariant(c *gin.Context) {
-
 	productIDParam := c.Param("id")
 	productID, err := strconv.Atoi(productIDParam)
 	if err != nil {
@@ -41,31 +47,58 @@ func (h *VariantHandler) CreateVariant(c *gin.Context) {
 	}
 
 	var req CreateVariantRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
+	if len(req.Images) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one image is required"})
+		return
+	}
+
+	var images []service.ImageInput
+	for _, img := range req.Images {
+		images = append(images, service.ImageInput{
+			URL:      img.URL,
+			PublicID: img.PublicID,
+		})
+	}
+
 	variant, err := h.variantService.CreateVariant(
+		req.VariantID,
 		uint(productID),
 		req.Size,
 		req.Color,
 		req.Price,
 		req.Stock,
+		images,
 	)
 
 	if err != nil {
+		switch {
+		case errors.Is(err, common.ErrInvalidVariantID):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
 
-		if errors.Is(err, common.ErrVariantExists) {
+		case errors.Is(err, common.ErrVariantExists):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
-		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to create variant",
-		})
-		return
+		case errors.Is(err, common.ErrInvalidImageData):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+
+		case errors.Is(err, common.ErrTransactionFailed):
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create variant"})
+			return
+
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to create variant",
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -74,7 +107,6 @@ func (h *VariantHandler) CreateVariant(c *gin.Context) {
 }
 
 func (h *VariantHandler) GetVariants(c *gin.Context) {
-
 	productIDParam := c.Param("id")
 	productID, err := strconv.Atoi(productIDParam)
 	if err != nil {
@@ -96,16 +128,9 @@ func (h *VariantHandler) GetVariants(c *gin.Context) {
 }
 
 func (h *VariantHandler) UpdateVariant(c *gin.Context) {
-
-	variantIDParam := c.Param("id")
-	variantID, err := strconv.Atoi(variantIDParam)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid variant id"})
-		return
-	}
+	variantID := c.Param("id")
 
 	var req UpdateVariantRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
@@ -119,22 +144,23 @@ func (h *VariantHandler) UpdateVariant(c *gin.Context) {
 	}
 
 	variant, err := h.variantService.UpdateVariant(
-		uint(variantID),
+		variantID,
 		req.Price,
 		req.Stock,
 	)
 
 	if err != nil {
-
-		if errors.Is(err, common.ErrVariantNotFound) {
+		switch {
+		case errors.Is(err, common.ErrVariantNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
-		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to update variant",
-		})
-		return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to update variant",
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -143,27 +169,21 @@ func (h *VariantHandler) UpdateVariant(c *gin.Context) {
 }
 
 func (h *VariantHandler) DeleteVariant(c *gin.Context) {
+	variantID := c.Param("id")
 
-	variantIDParam := c.Param("id")
-	variantID, err := strconv.Atoi(variantIDParam)
+	err := h.variantService.DeleteVariant(variantID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid variant id"})
-		return
-	}
-
-	err = h.variantService.DeleteVariant(uint(variantID))
-
-	if err != nil {
-
-		if errors.Is(err, common.ErrVariantNotFound) {
+		switch {
+		case errors.Is(err, common.ErrVariantNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
-		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to delete variant",
-		})
-		return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to delete variant",
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

@@ -14,10 +14,19 @@ var (
 	ErrVariantNotFound    = errors.New("variant not found")
 	ErrProductNotFound    = errors.New("product not found")
 	ErrForbidden          = errors.New("forbidden")
+	ErrInvalidVariantID   = errors.New("invalid variantId")
 
 	ErrCartItemNotFound  = errors.New("cart item not found")
 	ErrCartNotFound      = errors.New("cart not found")
+	ErrCartEmpty         = errors.New("cart is empty")
 	ErrInvalidQuantity   = errors.New("invalid quantity")
 	ErrInsufficientStock = errors.New("insufficient stock")
 	ErrUnauthorized      = errors.New("unauthorized action")
+
+	ErrOrderNotFound = errors.New("order not found")
+
+	ErrInvalidImageData   = errors.New("invalid image data")
+	ErrImageUploadFailed  = errors.New("image upload failed")
+	ErrImageCleanupFailed = errors.New("image cleanup failed")
+	ErrTransactionFailed  = errors.New("transaction failed")
 )

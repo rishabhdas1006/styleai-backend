@@ -14,6 +14,10 @@ func NewCartRepository(db *gorm.DB) *CartRepository {
 	return &CartRepository{db: db}
 }
 
+func (r *CartRepository) WithTx(tx *gorm.DB) *CartRepository {
+	return &CartRepository{db: tx}
+}
+
 func (r *CartRepository) GetOrCreateCart(userID uint) (*models.Cart, error) {
 	var cart models.Cart
 
@@ -33,7 +37,7 @@ func (r *CartRepository) GetOrCreateCart(userID uint) (*models.Cart, error) {
 	return nil, err
 }
 
-func (r *CartRepository) FindItem(cartID, variantID uint) (*models.CartItem, error) {
+func (r *CartRepository) FindItem(cartID uint, variantID string) (*models.CartItem, error) {
 	var item models.CartItem
 
 	result := r.db.
@@ -94,4 +98,9 @@ func (r *CartRepository) GetCartWithItems(userID uint) (*models.Cart, error) {
 	}
 
 	return &cart, nil
+}
+
+func (r *CartRepository) ClearCart(cartID uint) error {
+	return r.db.Where("cart_id = ?", cartID).
+		Delete(&models.CartItem{}).Error
 }

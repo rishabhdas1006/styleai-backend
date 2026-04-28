@@ -18,8 +18,8 @@ func NewCartHandler(cartService *service.CartService) *CartHandler {
 }
 
 type AddItemRequest struct {
-	VariantID uint `json:"variant_id"`
-	Quantity  int  `json:"quantity"`
+	VariantID string `json:"variant_id"`
+	Quantity  int    `json:"quantity"`
 }
 
 type UpdateItemRequest struct {

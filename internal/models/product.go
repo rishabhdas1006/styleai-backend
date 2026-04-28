@@ -7,7 +7,7 @@ type Product struct {
 	Name        string `gorm:"not null"`
 	Description string
 	Brand       string
-	CategoryID  uint
+	CategoryID  uint `gorm:"index"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -17,5 +17,4 @@ type Product struct {
 	Category Category `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 
 	Variants []ProductVariant `gorm:"foreignKey:ProductID"`
-	Images   []ProductImage   `gorm:"foreignKey:ProductID"`
 }

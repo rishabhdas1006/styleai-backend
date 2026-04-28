@@ -15,7 +15,7 @@ func NewCartService(cartRepo *repository.CartRepository, variantRepo *repository
 	return &CartService{cartRepo: cartRepo, variantRepo: variantRepo}
 }
 
-func (s *CartService) AddItem(userID, variantID uint, quantity int) error {
+func (s *CartService) AddItem(userID uint, variantID string, quantity int) error {
 	if quantity <= 0 {
 		return common.ErrInvalidQuantity
 	}

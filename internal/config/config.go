@@ -10,7 +10,8 @@ import (
 
 type Config struct {
 	Server struct {
-		Port int
+		Port        int
+		FrontendURL string `mapstructure:"FRONTEND_URL"`
 	}
 
 	Database struct {

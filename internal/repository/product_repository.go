@@ -15,6 +15,10 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
+func (r *ProductRepository) WithTx(tx *gorm.DB) *ProductRepository {
+	return &ProductRepository{db: tx}
+}
+
 func (r *ProductRepository) Create(product *models.Product) error {
 	return r.db.Create(product).Error
 }

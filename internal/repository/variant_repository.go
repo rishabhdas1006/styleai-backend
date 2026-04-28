@@ -15,6 +15,10 @@ func NewVariantRepository(db *gorm.DB) *VariantRepository {
 	return &VariantRepository{db: db}
 }
 
+func (r *VariantRepository) WithTx(tx *gorm.DB) *VariantRepository {
+	return &VariantRepository{db: tx}
+}
+
 func (r *VariantRepository) Create(variant *models.ProductVariant) error {
 	return r.db.Create(variant).Error
 }
@@ -25,10 +29,10 @@ func (r *VariantRepository) FindByProductID(productID uint) ([]models.ProductVar
 	return variants, err
 }
 
-func (r *VariantRepository) FindByID(id uint) (*models.ProductVariant, error) {
+func (r *VariantRepository) FindByID(id string) (*models.ProductVariant, error) {
 	var variant models.ProductVariant
 
-	err := r.db.First(&variant, id).Error
+	err := r.db.First(&variant, "id = ?", id).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, common.ErrVariantNotFound
@@ -43,6 +47,18 @@ func (r *VariantRepository) Update(variant *models.ProductVariant) error {
 	return r.db.Save(variant).Error
 }
 
-func (r *VariantRepository) Delete(id uint) error {
-	return r.db.Delete(&models.ProductVariant{}, id).Error
+func (r *VariantRepository) Delete(id string) error {
+	return r.db.Delete(&models.ProductVariant{}, "id = ?", id).Error
+}
+
+func (r *VariantRepository) ReduceStock(variantID string, qty int) error {
+	result := r.db.Model(&models.ProductVariant{}).
+		Where("id = ? AND stock >= ?", variantID, qty).
+		Update("stock", gorm.Expr("stock - ?", qty))
+
+	if result.RowsAffected == 0 {
+		return common.ErrInsufficientStock
+	}
+
+	return result.Error
 }
