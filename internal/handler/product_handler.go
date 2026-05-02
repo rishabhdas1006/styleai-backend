@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"styleai-backend/internal/common"
 	"styleai-backend/internal/service"
@@ -90,22 +91,78 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 
 func (h *ProductHandler) GetProducts(c *gin.Context) {
 	// pagination
-	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "10")
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
 
-	page, _ := strconv.Atoi(pageStr)
-	limit, _ := strconv.Atoi(limitStr)
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
 
 	// filters
 	category := c.Query("category")
 	brand := c.Query("brand")
 	search := c.Query("search")
 
-	// sorting
-	sort := c.DefaultQuery("sort", "newest")
+	color := strings.TrimSpace(c.Query("color"))
+	size := strings.TrimSpace(c.Query("size"))
 
-	result, err := h.productService.GetProducts(page, limit, category, brand, search, sort)
+	var minPrice, maxPrice float64
+
+	if v := c.Query("minPrice"); v != "" {
+		parsed, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid minPrice"})
+			return
+		}
+		minPrice = parsed
+	}
+
+	if v := c.Query("maxPrice"); v != "" {
+		parsed, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid maxPrice"})
+			return
+		}
+		maxPrice = parsed
+	}
+
+	// sorting
+	sort := strings.TrimSpace(c.DefaultQuery("sort", ""))
+
+	validSorts := map[string]bool{
+		"price_asc":  true,
+		"price_desc": true,
+		"newest":     true,
+	}
+
+	if !validSorts[sort] {
+		sort = ""
+	}
+
+	result, err := h.productService.GetProducts(
+		page,
+		limit,
+		category,
+		brand,
+		search,
+		sort,
+		color,
+		size,
+		minPrice,
+		maxPrice,
+	)
+
 	if err != nil {
+		if errors.Is(err, common.ErrMaxPriceLessThanMinPrice) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": common.ErrMaxPriceLessThanMinPrice.Error(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to fetch products",
 		})

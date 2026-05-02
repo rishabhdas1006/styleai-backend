@@ -2,7 +2,7 @@ package models
 
 type ProductVariant struct {
 	ID        string `gorm:"type:uuid;primaryKey"`
-	ProductID uint   `gorm:"index;not null"`
+	ProductID uint   `gorm:"uniqueIndex:idx_variant"`
 
 	Size  string `gorm:"not null;uniqueIndex:idx_variant"`
 	Color string `gorm:"not null;uniqueIndex:idx_variant"`

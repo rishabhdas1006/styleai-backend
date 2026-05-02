@@ -41,14 +41,20 @@ func (r *ProductRepository) FindByID(id uint) (*models.Product, error) {
 func (r *ProductRepository) FindAll(
 	offset, limit int,
 	category, brand, search, sort string,
+	color, size string,
+	minPrice, maxPrice float64,
 ) ([]models.Product, int64, error) {
 
 	var products []models.Product
 	var total int64
 
-	db := r.db.Model(&models.Product{}).Preload("Category")
+	// Base query
+	db := r.db.Model(&models.Product{}).
+		Joins("LEFT JOIN product_variants v ON v.product_id = products.id").
+		Preload("Category").
+		Group("products.id")
 
-	// filtering
+	// product filters
 
 	if category != "" {
 		db = db.Joins("JOIN categories ON categories.id = products.category_id").
@@ -64,9 +70,29 @@ func (r *ProductRepository) FindAll(
 		db = db.Where("LOWER(name) LIKE ?", search)
 	}
 
+	// variant filters
+
+	if color != "" {
+		db = db.Where("v.color = ?", color)
+	}
+
+	if size != "" {
+		db = db.Where("v.size = ?", size)
+	}
+
+	if minPrice > 0 {
+		db = db.Where("v.price >= ?", minPrice)
+	}
+
+	if maxPrice > 0 {
+		db = db.Where("v.price <= ?", maxPrice)
+	}
+
 	// count
 
-	if err := db.Count(&total).Error; err != nil {
+	countDB := db.Session(&gorm.Session{}) // clone query
+
+	if err := countDB.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -74,11 +100,11 @@ func (r *ProductRepository) FindAll(
 
 	switch sort {
 	case "price_asc":
-		db = db.Order("min_price ASC")
+		db = db.Order("products.min_price ASC")
 	case "price_desc":
-		db = db.Order("min_price DESC")
+		db = db.Order("products.min_price DESC")
 	default:
-		db = db.Order("id DESC")
+		db = db.Order("products.id DESC")
 	}
 
 	// pagination
