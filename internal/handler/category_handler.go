@@ -55,6 +55,21 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 	})
 }
 
+func (h *CategoryHandler) GetCategories(c *gin.Context) {
+	categories, err := h.categoryService.GetCategories()
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to get categories",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"categories": categories,
+	})
+}
+
 func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 
 	idParam := c.Param("id")
