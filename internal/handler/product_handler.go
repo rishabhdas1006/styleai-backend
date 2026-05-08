@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"styleai-backend/internal/common"
+	"styleai-backend/internal/dto"
 	"styleai-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -20,16 +21,9 @@ func NewProductHandler(service *service.ProductService) *ProductHandler {
 	return &ProductHandler{productService: service}
 }
 
-type CreateProductRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description" binding:"required"`
-	Brand       string `json:"brand" binding:"required"`
-	CategoryID  uint   `json:"category_id" binding:"required"`
-}
-
 func (h *ProductHandler) CreateProduct(c *gin.Context) {
 
-	var req CreateProductRequest
+	var req dto.CreateProductRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -43,9 +37,17 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		req.Description,
 		req.Brand,
 		req.CategoryID,
+		req.Gender,
 	)
 
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidGender) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to create product",
 		})
@@ -53,7 +55,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"product": product,
+		"product": dto.ToProductDetailResponse(*product),
 	})
 }
 
@@ -85,52 +87,27 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"product": product,
+		"product": dto.ToProductDetailResponse(*product),
 	})
 }
 
 func (h *ProductHandler) GetProducts(c *gin.Context) {
-	// pagination
-	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-	if err != nil || page < 1 {
-		page = 1
+	var query dto.GetProductsQuery
+
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid query parameters",
+		})
+		return
 	}
 
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	if err != nil || limit <= 0 {
-		limit = 10
-	}
-
-	// filters
-	category := c.Query("category")
-	brand := c.Query("brand")
-	search := c.Query("search")
-
-	color := strings.TrimSpace(c.Query("color"))
-	size := strings.TrimSpace(c.Query("size"))
-
-	var minPrice, maxPrice float64
-
-	if v := c.Query("minPrice"); v != "" {
-		parsed, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid minPrice"})
-			return
-		}
-		minPrice = parsed
-	}
-
-	if v := c.Query("maxPrice"); v != "" {
-		parsed, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid maxPrice"})
-			return
-		}
-		maxPrice = parsed
-	}
-
-	// sorting
-	sort := strings.TrimSpace(c.DefaultQuery("sort", ""))
+	query.Category = strings.TrimSpace(query.Category)
+	query.Brand = strings.TrimSpace(query.Brand)
+	query.Search = strings.TrimSpace(query.Search)
+	query.Gender = strings.TrimSpace(query.Gender)
+	query.Color = strings.TrimSpace(query.Color)
+	query.Size = strings.TrimSpace(query.Size)
+	query.Sort = strings.TrimSpace(query.Sort)
 
 	validSorts := map[string]bool{
 		"price_asc":  true,
@@ -138,27 +115,16 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 		"newest":     true,
 	}
 
-	if !validSorts[sort] {
-		sort = ""
+	if !validSorts[query.Sort] {
+		query.Sort = ""
 	}
 
-	result, err := h.productService.GetProducts(
-		page,
-		limit,
-		category,
-		brand,
-		search,
-		sort,
-		color,
-		size,
-		minPrice,
-		maxPrice,
-	)
+	result, err := h.productService.GetProducts(query)
 
 	if err != nil {
-		if errors.Is(err, common.ErrMaxPriceLessThanMinPrice) {
+		if errors.Is(err, common.ErrMaxPriceLessThanMinPrice) || errors.Is(err, common.ErrInvalidGender) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": common.ErrMaxPriceLessThanMinPrice.Error(),
+				"error": err.Error(),
 			})
 			return
 		}

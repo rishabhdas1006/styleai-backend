@@ -7,7 +7,9 @@ type Product struct {
 	Name        string `gorm:"not null"`
 	Description string
 	Brand       string
-	CategoryID  uint `gorm:"index"`
+
+	CategoryID uint   `gorm:"index"`
+	Gender     string `gorm:"type:varchar(10);index;not null"`
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

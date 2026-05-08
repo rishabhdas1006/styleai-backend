@@ -16,6 +16,7 @@ var (
 	ErrForbidden                = errors.New("forbidden")
 	ErrInvalidVariantID         = errors.New("invalid variantId")
 	ErrMaxPriceLessThanMinPrice = errors.New("maxPrice cannot be less than minPrice")
+	ErrInvalidGender            = errors.New("invalid gender")
 
 	ErrCartItemNotFound  = errors.New("cart item not found")
 	ErrCartNotFound      = errors.New("cart not found")

@@ -28,7 +28,7 @@ func (r *ProductRepository) FindByID(id uint) (*models.Product, error) {
 	err := r.db.
 		Preload("Category").
 		Preload("Variants").
-		Preload("Images").
+		Preload("Variants.Images").
 		First(&product, id).Error
 
 	if err != nil {
@@ -40,7 +40,7 @@ func (r *ProductRepository) FindByID(id uint) (*models.Product, error) {
 
 func (r *ProductRepository) FindAll(
 	offset, limit int,
-	category, brand, search, sort string,
+	category, brand, search, sort, gender string,
 	color, size string,
 	minPrice, maxPrice float64,
 ) ([]models.Product, int64, error) {
@@ -68,6 +68,10 @@ func (r *ProductRepository) FindAll(
 	if search != "" {
 		search = "%" + strings.ToLower(search) + "%"
 		db = db.Where("LOWER(name) LIKE ?", search)
+	}
+
+	if gender != "" {
+		db = db.Where("LOWER(products.gender) = ?", strings.ToLower(gender))
 	}
 
 	// variant filters

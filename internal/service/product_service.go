@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 	"styleai-backend/internal/common"
+	"styleai-backend/internal/dto"
 	"styleai-backend/internal/models"
 	"styleai-backend/internal/repository"
 
@@ -19,21 +20,22 @@ func NewProductService(repo *repository.ProductRepository) *ProductService {
 	return &ProductService{productRepo: repo}
 }
 
-type ProductListResponse struct {
-	Products   []models.Product `json:"products"`
-	Page       int              `json:"page"`
-	Limit      int              `json:"limit"`
-	Total      int64            `json:"total"`
-	TotalPages int64            `json:"totalPages"`
-}
+func (s *ProductService) CreateProduct(name, description, brand string, categoryID uint, gender string) (*models.Product, error) {
+	name = strings.TrimSpace(name)
+	description = strings.TrimSpace(description)
+	brand = strings.ToLower(strings.TrimSpace(brand))
+	gender = strings.ToLower(strings.TrimSpace(gender))
 
-func (s *ProductService) CreateProduct(name, description, brand string, categoryID uint) (*models.Product, error) {
+	if !common.IsValidGender(common.Gender(gender)) {
+		return nil, common.ErrInvalidGender
+	}
 
 	product := &models.Product{
 		Name:        name,
 		Description: description,
 		Brand:       brand,
 		CategoryID:  categoryID,
+		Gender:      gender,
 	}
 
 	err := s.productRepo.Create(product)
@@ -58,62 +60,57 @@ func (s *ProductService) GetProductByID(id uint) (*models.Product, error) {
 	return product, nil
 }
 
-func (s *ProductService) GetProducts(
-	page, limit int,
-	category, brand, search, sort string,
-	color, size string,
-	minPrice, maxPrice float64,
-) (*ProductListResponse, error) {
+func (s *ProductService) GetProducts(filter dto.GetProductsQuery) (*dto.ProductListResponse, error) {
 
-	if page < 1 {
-		page = 1
+	if filter.Page < 1 {
+		filter.Page = 1
 	}
 
-	if limit <= 0 || limit > 50 {
-		limit = 10
+	if filter.Limit <= 0 || filter.Limit > 50 {
+		filter.Limit = 10
 	}
 
-	offset := (page - 1) * limit
+	offset := (filter.Page - 1) * filter.Limit
 
-	category = strings.TrimSpace(category)
-	brand = strings.TrimSpace(brand)
-	search = strings.TrimSpace(search)
-	color = strings.TrimSpace(color)
-	size = strings.TrimSpace(size)
-	sort = strings.TrimSpace(sort)
+	filter.Category = strings.ToLower(filter.Category)
+	filter.Brand = strings.ToLower(filter.Brand)
+	filter.Search = strings.ToLower(filter.Search)
+	filter.Gender = strings.ToLower(filter.Gender)
+	filter.Color = strings.ToLower(filter.Color)
+	filter.Size = strings.ToLower(filter.Size)
 
-	if minPrice < 0 {
-		minPrice = 0
+	if filter.MinPrice < 0 {
+		filter.MinPrice = 0
 	}
 
-	if maxPrice > 0 && maxPrice < minPrice {
+	if filter.MaxPrice > 0 && filter.MaxPrice < filter.MinPrice {
 		return nil, common.ErrMaxPriceLessThanMinPrice
+	}
+
+	if filter.Gender != "" && !common.IsValidGender(common.Gender(filter.Gender)) {
+		return nil, common.ErrInvalidGender
 	}
 
 	products, total, err := s.productRepo.FindAll(
 		offset,
-		limit,
-		category,
-		brand,
-		search,
-		sort,
-		color,
-		size,
-		minPrice,
-		maxPrice,
+		filter.Limit,
+		filter.Category,
+		filter.Brand,
+		filter.Search,
+		filter.Sort,
+		filter.Gender,
+		filter.Color,
+		filter.Size,
+		filter.MinPrice,
+		filter.MaxPrice,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	totalPages := int64(math.Ceil(float64(total) / float64(limit)))
+	totalPages := int64(math.Ceil(float64(total) / float64(filter.Limit)))
+	response := dto.ToProductListResponse(products, filter.Page, filter.Limit, total, totalPages)
 
-	return &ProductListResponse{
-		Products:   products,
-		Page:       page,
-		Limit:      limit,
-		Total:      total,
-		TotalPages: totalPages,
-	}, nil
+	return &response, nil
 }
