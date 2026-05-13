@@ -63,6 +63,7 @@ configs/config.*.local.yaml
 # =========================
 tmp/
 temp/
+.gocache/
 
 # =========================
 # Coverage reports

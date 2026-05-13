@@ -2,6 +2,7 @@ package repository
 
 import (
 	"strings"
+	"styleai-backend/internal/dto"
 	"styleai-backend/internal/models"
 
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ func (r *ProductRepository) FindByID(id uint) (*models.Product, error) {
 	err := r.db.
 		Preload("Category").
 		Preload("Variants").
-		Preload("Images").
+		Preload("Variants.Images").
 		First(&product, id).Error
 
 	if err != nil {
@@ -38,53 +39,78 @@ func (r *ProductRepository) FindByID(id uint) (*models.Product, error) {
 	return &product, nil
 }
 
-func (r *ProductRepository) FindAll(
-	offset, limit int,
-	category, brand, search, sort string,
-) ([]models.Product, int64, error) {
+func (r *ProductRepository) FindAll(offset int, filter dto.GetProductsQuery) ([]models.Product, int64, error) {
 
 	var products []models.Product
 	var total int64
 
-	db := r.db.Model(&models.Product{}).Preload("Category")
+	// Base query
+	db := r.db.Model(&models.Product{}).
+		Joins("LEFT JOIN product_variants v ON v.product_id = products.id").
+		Preload("Category").
+		Group("products.id")
 
-	// filtering
+	// product filters
 
-	if category != "" {
+	if filter.Category != "" {
 		db = db.Joins("JOIN categories ON categories.id = products.category_id").
-			Where("LOWER(categories.name) = ?", strings.ToLower(category))
+			Where("LOWER(categories.name) = ?", strings.ToLower(filter.Category))
 	}
 
-	if brand != "" {
-		db = db.Where("LOWER(brand) = ?", strings.ToLower(brand))
+	if filter.Brand != "" {
+		db = db.Where("LOWER(brand) = ?", strings.ToLower(filter.Brand))
 	}
 
-	if search != "" {
-		search = "%" + strings.ToLower(search) + "%"
-		db = db.Where("LOWER(name) LIKE ?", search)
+	if filter.Search != "" {
+		filter.Search = "%" + strings.ToLower(filter.Search) + "%"
+		db = db.Where("LOWER(name) LIKE ?", filter.Search)
+	}
+
+	if filter.Gender != "" {
+		db = db.Where("LOWER(products.gender) = ?", strings.ToLower(filter.Gender))
+	}
+
+	// variant filters
+
+	if filter.Color != "" {
+		db = db.Where("v.color = ?", filter.Color)
+	}
+
+	if filter.Size != "" {
+		db = db.Where("v.size = ?", filter.Size)
+	}
+
+	if filter.MinPrice > 0 {
+		db = db.Where("v.price >= ?", filter.MinPrice)
+	}
+
+	if filter.MaxPrice > 0 {
+		db = db.Where("v.price <= ?", filter.MaxPrice)
 	}
 
 	// count
 
-	if err := db.Count(&total).Error; err != nil {
+	countDB := db.Session(&gorm.Session{}) // clone query
+
+	if err := countDB.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	// sorting
 
-	switch sort {
+	switch filter.Sort {
 	case "price_asc":
-		db = db.Order("min_price ASC")
+		db = db.Order("products.min_price ASC")
 	case "price_desc":
-		db = db.Order("min_price DESC")
+		db = db.Order("products.min_price DESC")
 	default:
-		db = db.Order("id DESC")
+		db = db.Order("products.id DESC")
 	}
 
 	// pagination
 
 	err := db.
-		Limit(limit).
+		Limit(filter.Limit).
 		Offset(offset).
 		Find(&products).Error
 

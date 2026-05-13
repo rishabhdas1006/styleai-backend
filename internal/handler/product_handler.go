@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"styleai-backend/internal/common"
+	"styleai-backend/internal/dto"
 	"styleai-backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -19,16 +20,9 @@ func NewProductHandler(service *service.ProductService) *ProductHandler {
 	return &ProductHandler{productService: service}
 }
 
-type CreateProductRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description" binding:"required"`
-	Brand       string `json:"brand" binding:"required"`
-	CategoryID  uint   `json:"category_id" binding:"required"`
-}
-
 func (h *ProductHandler) CreateProduct(c *gin.Context) {
 
-	var req CreateProductRequest
+	var req dto.CreateProductRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -42,9 +36,17 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		req.Description,
 		req.Brand,
 		req.CategoryID,
+		req.Gender,
 	)
 
 	if err != nil {
+		if errors.Is(err, common.ErrInvalidGender) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to create product",
 		})
@@ -89,23 +91,35 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 }
 
 func (h *ProductHandler) GetProducts(c *gin.Context) {
-	// pagination
-	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "10")
+	var query dto.GetProductsQuery
 
-	page, _ := strconv.Atoi(pageStr)
-	limit, _ := strconv.Atoi(limitStr)
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid query parameters",
+		})
+		return
+	}
 
-	// filters
-	category := c.Query("category")
-	brand := c.Query("brand")
-	search := c.Query("search")
+	validSorts := map[string]bool{
+		"price_asc":  true,
+		"price_desc": true,
+		"newest":     true,
+	}
 
-	// sorting
-	sort := c.DefaultQuery("sort", "newest")
+	if !validSorts[query.Sort] {
+		query.Sort = ""
+	}
 
-	result, err := h.productService.GetProducts(page, limit, category, brand, search, sort)
+	result, err := h.productService.GetProducts(query)
+
 	if err != nil {
+		if errors.Is(err, common.ErrMaxPriceLessThanMinPrice) || errors.Is(err, common.ErrInvalidGender) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to fetch products",
 		})

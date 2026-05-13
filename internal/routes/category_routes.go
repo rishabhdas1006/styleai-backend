@@ -9,6 +9,7 @@ import (
 func RegisterCategoryRoutes(r *gin.RouterGroup, categoryHandler *handler.CategoryHandler) {
 	categories := r.Group("/categories")
 	{
+		categories.GET("/", categoryHandler.GetCategories)
 		categories.GET("/:id", categoryHandler.GetCategoryByID)
 	}
 }

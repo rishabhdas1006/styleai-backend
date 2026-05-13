@@ -41,6 +41,16 @@ func (s *CategoryService) CreateCategory(name string) (*models.Category, error) 
 	return category, nil
 }
 
+func (s *CategoryService) GetCategories() ([]models.Category, error) {
+	categories, err := s.categoryRepo.FindAll()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return categories, nil
+}
+
 func (s *CategoryService) GetCategoryByID(id uint) (*models.Category, error) {
 
 	category, err := s.categoryRepo.FindByID(id)
