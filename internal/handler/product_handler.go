@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"styleai-backend/internal/common"
 	"styleai-backend/internal/dto"
@@ -55,7 +54,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"product": dto.ToProductDetailResponse(*product),
+		"product": product,
 	})
 }
 
@@ -87,7 +86,7 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"product": dto.ToProductDetailResponse(*product),
+		"product": product,
 	})
 }
 
@@ -100,14 +99,6 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 		})
 		return
 	}
-
-	query.Category = strings.TrimSpace(query.Category)
-	query.Brand = strings.TrimSpace(query.Brand)
-	query.Search = strings.TrimSpace(query.Search)
-	query.Gender = strings.TrimSpace(query.Gender)
-	query.Color = strings.TrimSpace(query.Color)
-	query.Size = strings.TrimSpace(query.Size)
-	query.Sort = strings.TrimSpace(query.Sort)
 
 	validSorts := map[string]bool{
 		"price_asc":  true,

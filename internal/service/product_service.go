@@ -72,12 +72,13 @@ func (s *ProductService) GetProducts(filter dto.GetProductsQuery) (*dto.ProductL
 
 	offset := (filter.Page - 1) * filter.Limit
 
-	filter.Category = strings.ToLower(filter.Category)
-	filter.Brand = strings.ToLower(filter.Brand)
-	filter.Search = strings.ToLower(filter.Search)
-	filter.Gender = strings.ToLower(filter.Gender)
-	filter.Color = strings.ToLower(filter.Color)
-	filter.Size = strings.ToLower(filter.Size)
+	filter.Category = strings.ToLower(strings.TrimSpace(filter.Category))
+	filter.Brand = strings.ToLower(strings.TrimSpace(filter.Brand))
+	filter.Search = strings.ToLower(strings.TrimSpace(filter.Search))
+	filter.Gender = strings.ToLower(strings.TrimSpace(filter.Gender))
+	filter.Color = strings.ToLower(strings.TrimSpace(filter.Color))
+	filter.Size = strings.ToLower(strings.TrimSpace(filter.Size))
+	filter.Sort = strings.TrimSpace(filter.Sort)
 
 	if filter.MinPrice < 0 {
 		filter.MinPrice = 0
@@ -91,26 +92,19 @@ func (s *ProductService) GetProducts(filter dto.GetProductsQuery) (*dto.ProductL
 		return nil, common.ErrInvalidGender
 	}
 
-	products, total, err := s.productRepo.FindAll(
-		offset,
-		filter.Limit,
-		filter.Category,
-		filter.Brand,
-		filter.Search,
-		filter.Sort,
-		filter.Gender,
-		filter.Color,
-		filter.Size,
-		filter.MinPrice,
-		filter.MaxPrice,
-	)
+	products, total, err := s.productRepo.FindAll(offset, filter)
 
 	if err != nil {
 		return nil, err
 	}
 
 	totalPages := int64(math.Ceil(float64(total) / float64(filter.Limit)))
-	response := dto.ToProductListResponse(products, filter.Page, filter.Limit, total, totalPages)
 
-	return &response, nil
+	return &dto.ProductListResponse{
+		Products:   products,
+		Page:       filter.Page,
+		Limit:      filter.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}, nil
 }

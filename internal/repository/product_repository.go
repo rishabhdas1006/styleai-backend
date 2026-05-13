@@ -2,6 +2,7 @@ package repository
 
 import (
 	"strings"
+	"styleai-backend/internal/dto"
 	"styleai-backend/internal/models"
 
 	"gorm.io/gorm"
@@ -38,12 +39,7 @@ func (r *ProductRepository) FindByID(id uint) (*models.Product, error) {
 	return &product, nil
 }
 
-func (r *ProductRepository) FindAll(
-	offset, limit int,
-	category, brand, search, sort, gender string,
-	color, size string,
-	minPrice, maxPrice float64,
-) ([]models.Product, int64, error) {
+func (r *ProductRepository) FindAll(offset int, filter dto.GetProductsQuery) ([]models.Product, int64, error) {
 
 	var products []models.Product
 	var total int64
@@ -56,40 +52,40 @@ func (r *ProductRepository) FindAll(
 
 	// product filters
 
-	if category != "" {
+	if filter.Category != "" {
 		db = db.Joins("JOIN categories ON categories.id = products.category_id").
-			Where("LOWER(categories.name) = ?", strings.ToLower(category))
+			Where("LOWER(categories.name) = ?", strings.ToLower(filter.Category))
 	}
 
-	if brand != "" {
-		db = db.Where("LOWER(brand) = ?", strings.ToLower(brand))
+	if filter.Brand != "" {
+		db = db.Where("LOWER(brand) = ?", strings.ToLower(filter.Brand))
 	}
 
-	if search != "" {
-		search = "%" + strings.ToLower(search) + "%"
-		db = db.Where("LOWER(name) LIKE ?", search)
+	if filter.Search != "" {
+		filter.Search = "%" + strings.ToLower(filter.Search) + "%"
+		db = db.Where("LOWER(name) LIKE ?", filter.Search)
 	}
 
-	if gender != "" {
-		db = db.Where("LOWER(products.gender) = ?", strings.ToLower(gender))
+	if filter.Gender != "" {
+		db = db.Where("LOWER(products.gender) = ?", strings.ToLower(filter.Gender))
 	}
 
 	// variant filters
 
-	if color != "" {
-		db = db.Where("v.color = ?", color)
+	if filter.Color != "" {
+		db = db.Where("v.color = ?", filter.Color)
 	}
 
-	if size != "" {
-		db = db.Where("v.size = ?", size)
+	if filter.Size != "" {
+		db = db.Where("v.size = ?", filter.Size)
 	}
 
-	if minPrice > 0 {
-		db = db.Where("v.price >= ?", minPrice)
+	if filter.MinPrice > 0 {
+		db = db.Where("v.price >= ?", filter.MinPrice)
 	}
 
-	if maxPrice > 0 {
-		db = db.Where("v.price <= ?", maxPrice)
+	if filter.MaxPrice > 0 {
+		db = db.Where("v.price <= ?", filter.MaxPrice)
 	}
 
 	// count
@@ -102,7 +98,7 @@ func (r *ProductRepository) FindAll(
 
 	// sorting
 
-	switch sort {
+	switch filter.Sort {
 	case "price_asc":
 		db = db.Order("products.min_price ASC")
 	case "price_desc":
@@ -114,7 +110,7 @@ func (r *ProductRepository) FindAll(
 	// pagination
 
 	err := db.
-		Limit(limit).
+		Limit(filter.Limit).
 		Offset(offset).
 		Find(&products).Error
 
