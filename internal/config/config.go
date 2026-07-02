@@ -5,30 +5,38 @@ import (
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server struct {
-		Port        int
-		FrontendURL string `mapstructure:"FRONTEND_URL"`
-	}
+	Environment string         `mapstructure:"environment"`
+	Server      ServerConfig   `mapstructure:"server"`
+	Database    DatabaseConfig `mapstructure:"database"`
+	JWT         JWTConfig      `mapstructure:"jwt"`
+}
 
-	Database struct {
-		Host     string
-		Port     int
-		User     string
-		Password string
-		DBName   string
-		SSLMode  string
-	}
+type ServerConfig struct {
+	Port        string `mapstructure:"port"`
+	FrontendURL string `mapstructure:"frontend_url"`
+}
 
-	JWT struct {
-		Secret string
-	}
+type DatabaseConfig struct {
+	Host       string `mapstructure:"host"`
+	Port       int    `mapstructure:"port"`
+	User       string `mapstructure:"user"`
+	Password   string `mapstructure:"password"`
+	DBName     string `mapstructure:"dbname"`
+	SSLMode    string `mapstructure:"sslmode"`
+	AutoCreate bool   `mapstructure:"auto_create"`
+}
+
+type JWTConfig struct {
+	Secret string `mapstructure:"secret"`
 }
 
 func LoadConfig() *Config {
+	_ = godotenv.Load()
 
 	env := os.Getenv("APP_ENV")
 
@@ -52,6 +60,17 @@ func LoadConfig() *Config {
 	err = viper.Unmarshal(&cfg)
 	if err != nil {
 		log.Fatal("Unable to decode config:", err)
+	}
+
+	cfg.Database.Password = os.Getenv("DB_PASSWORD")
+	cfg.JWT.Secret = os.Getenv("JWT_SECRET")
+
+	if port := os.Getenv("PORT"); port != "" {
+		cfg.Server.Port = port
+	}
+
+	if frontend := os.Getenv("FRONTEND_URL"); frontend != "" {
+		cfg.Server.FrontendURL = frontend
 	}
 
 	return &cfg

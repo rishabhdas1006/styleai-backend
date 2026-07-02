@@ -1,0 +1,13 @@
+environment: production
+
+server:
+  port: 8080
+  frontend_url: ""
+
+database:
+  host: prod-db
+  port: 5432
+  user: styleai
+  dbname: styleai
+  sslmode: require
+  auto_create: false
