@@ -54,8 +54,6 @@ Thumbs.db
 configs/config.local.yaml
 configs/config.*.local.yaml
 
-configs/config.prod.yaml
-
 # =========================
 # Temporary files
 # =========================

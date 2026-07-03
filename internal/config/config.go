@@ -73,5 +73,13 @@ func LoadConfig() *Config {
 		cfg.Server.FrontendURL = frontend
 	}
 
+	if host := os.Getenv("DB_HOST"); host != "" {
+		cfg.Database.Host = host
+	}
+
+	if user := os.Getenv("DB_USER"); user != "" {
+		cfg.Database.User = user
+	}
+
 	return &cfg
 }
