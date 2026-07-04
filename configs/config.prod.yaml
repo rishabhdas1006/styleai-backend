@@ -8,6 +8,6 @@ database:
   host: ""
   port: 5432
   user: ""
-  dbname: styleai
-  sslmode: disable
+  dbname: postgres
+  sslmode: require
   auto_create: false
