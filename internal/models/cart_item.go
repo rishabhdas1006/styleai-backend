@@ -10,6 +10,8 @@ type CartItem struct {
 	Quantity int     `gorm:"not null"`
 	Price    float64 `gorm:"not null"`
 
+	Variant ProductVariant `gorm:"foreignKey:VariantID;references:ID"`
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

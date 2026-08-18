@@ -52,6 +52,13 @@ func (r *ProductRepository) FindAll(offset int, filter dto.GetProductsQuery) ([]
 
 	// product filters
 
+	if filter.CreatedByID != nil {
+		db = db.Where(
+			"products.created_by_id = ?",
+			*filter.CreatedByID,
+		)
+	}
+
 	if filter.Category != "" {
 		db = db.Joins("JOIN categories ON categories.id = products.category_id").
 			Where("LOWER(categories.name) = ?", strings.ToLower(filter.Category))

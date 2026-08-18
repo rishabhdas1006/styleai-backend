@@ -46,13 +46,14 @@ func RegisterRoutes(r *gin.Engine, cfg *config.Config) {
 	orderService := service.NewOrderService(cartRepo, orderRepo, variantRepo, database.DB)
 	orderHandler := handler.NewOrderHandler(orderService)
 
-	cloudinaryService := service.NewCloudinaryService()
+	cloudinaryService := service.NewCloudinaryService(cloudinaryManager)
 	cloudinaryHandler := handler.NewCloudinaryHandler(cloudinaryService)
 
 	api := r.Group("/api/v1")
 
 	RegisterAuthRoutes(api, userHandler, cfg)
-	RegisterProductRoutes(api, productHandler, variantHandler)
+	RegisterProductRoutes(api, productHandler, variantHandler, cfg.JWT.Secret)
+	RegisterCategoryRoutes(api, categoryHandler)
 	RegisterCartRoutes(api, cartHandler, cfg)
 	RegisterAdminRoutes(api, categoryHandler, productHandler, variantHandler, cloudinaryHandler, cfg)
 	RegisterOrderRoutes(api, orderHandler, cfg)

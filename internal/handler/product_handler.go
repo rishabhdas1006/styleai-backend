@@ -31,16 +31,28 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		return
 	}
 
+	userID := c.GetUint(common.ContextUserID)
+
 	product, err := h.productService.CreateProduct(
 		req.Name,
 		req.Description,
 		req.Brand,
 		req.CategoryID,
 		req.Gender,
+		req.PrimaryImageURL,
+		req.PrimaryImagePublicID,
+		userID,
 	)
 
 	if err != nil {
 		if errors.Is(err, common.ErrInvalidGender) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		if errors.Is(err, common.ErrPrimaryImageRequired) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
@@ -98,6 +110,14 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 			"error": "invalid query parameters",
 		})
 		return
+	}
+
+	userID := c.GetUint(common.ContextUserID)
+
+	println(userID)
+
+	if query.Mine {
+		query.CreatedByID = &userID
 	}
 
 	validSorts := map[string]bool{

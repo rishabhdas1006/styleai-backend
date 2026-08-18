@@ -67,13 +67,32 @@ func (s *VariantService) CreateVariant(
 	size = strings.ToUpper(strings.TrimSpace(size))
 	color = strings.ToLower(strings.TrimSpace(color))
 
+	// Cloudinary images are uploaded by the frontend before
+	// this method is called, so this prefix identifies all
+	// uploaded images belonging to this variant.
+	prefix := fmt.Sprintf(
+		"products/%d/%s",
+		productID,
+		variantID,
+	)
+
 	existing, err := s.variantRepo.FindByProductID(productID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch variants: %w", err)
+		_ = s.cldManager.DeleteByPrefix(prefix)
+
+		return nil, fmt.Errorf(
+			"failed to fetch variants: %w",
+			err,
+		)
 	}
 
+	// Prevent duplicate size/color combinations.
 	for _, v := range existing {
 		if v.Size == size && v.Color == color {
+			// Variant won't be created, so remove the
+			// images that were already uploaded.
+			_ = s.cldManager.DeleteByPrefix(prefix)
+
 			return nil, common.ErrVariantExists
 		}
 	}
@@ -90,52 +109,93 @@ func (s *VariantService) CreateVariant(
 		Stock:     stock,
 	}
 
-	prefix := fmt.Sprintf("products/%d/%s", productID, variantID)
 	tx := s.db.Begin()
+
+	if tx.Error != nil {
+		_ = s.cldManager.DeleteByPrefix(prefix)
+
+		return nil, fmt.Errorf(
+			"failed to begin transaction: %w",
+			tx.Error,
+		)
+	}
 
 	if err := s.variantRepo.WithTx(tx).Create(variant); err != nil {
 		tx.Rollback()
+
 		_ = s.cldManager.DeleteByPrefix(prefix)
 
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, common.ErrVariantExists
 		}
 
-		return nil, fmt.Errorf("create variant failed: %w", err)
+		return nil, fmt.Errorf(
+			"create variant failed: %w",
+			err,
+		)
 	}
 
 	var variantImages []models.VariantImage
+
 	for i, img := range images {
 		if img.URL == "" || img.PublicID == "" {
 			tx.Rollback()
+
 			_ = s.cldManager.DeleteByPrefix(prefix)
+
 			return nil, common.ErrInvalidImageData
 		}
 
-		variantImages = append(variantImages, models.VariantImage{
-			VariantID: variantID,
-			ImageURL:  img.URL,
-			PublicID:  img.PublicID,
-			Position:  i,
-		})
+		variantImages = append(
+			variantImages,
+			models.VariantImage{
+				VariantID: variantID,
+				ImageURL:  img.URL,
+				PublicID:  img.PublicID,
+				Position:  i,
+			},
+		)
 	}
 
-	if len(variantImages) > 0 {
-		if err := s.variantImageRepo.WithTx(tx).CreateImages(variantImages); err != nil {
-			tx.Rollback()
-			_ = s.cldManager.DeleteByPrefix(prefix)
-			return nil, fmt.Errorf("create images failed: %w", err)
-		}
-	}
-
-	if err := s.productRepo.WithTx(tx).UpdateMinPrice(productID); err != nil {
+	if len(variantImages) == 0 {
 		tx.Rollback()
+
 		_ = s.cldManager.DeleteByPrefix(prefix)
-		return nil, fmt.Errorf("update min price failed: %w", err)
+
+		return nil, common.ErrInvalidImageData
+	}
+
+	if err := s.variantImageRepo.
+		WithTx(tx).
+		CreateImages(variantImages); err != nil {
+
+		tx.Rollback()
+
+		_ = s.cldManager.DeleteByPrefix(prefix)
+
+		return nil, fmt.Errorf(
+			"create images failed: %w",
+			err,
+		)
+	}
+
+	if err := s.productRepo.
+		WithTx(tx).
+		UpdateMinPrice(productID); err != nil {
+
+		tx.Rollback()
+
+		_ = s.cldManager.DeleteByPrefix(prefix)
+
+		return nil, fmt.Errorf(
+			"update min price failed: %w",
+			err,
+		)
 	}
 
 	if err := tx.Commit().Error; err != nil {
 		_ = s.cldManager.DeleteByPrefix(prefix)
+
 		return nil, common.ErrTransactionFailed
 	}
 
@@ -177,18 +237,83 @@ func (s *VariantService) UpdateVariant(id string, price *float64, stock *int) (*
 }
 
 func (s *VariantService) DeleteVariant(id string) error {
-
 	variant, err := s.variantRepo.FindByID(id)
 	if err != nil {
 		return common.ErrVariantNotFound
 	}
 
-	if err := s.variantRepo.Delete(id); err != nil {
-		return fmt.Errorf("delete variant failed: %w", err)
+	prefix := fmt.Sprintf(
+		"products/%d/%s",
+		variant.ProductID,
+		variant.ID,
+	)
+
+	tx := s.db.Begin()
+
+	if tx.Error != nil {
+		return fmt.Errorf(
+			"failed to begin transaction: %w",
+			tx.Error,
+		)
 	}
 
-	if err := s.productRepo.UpdateMinPrice(variant.ProductID); err != nil {
-		return fmt.Errorf("update min price failed: %w", err)
+	// Delete image records first because they reference the variant.
+	if err := s.variantImageRepo.
+		WithTx(tx).
+		DeleteByVariantID(id); err != nil {
+
+		tx.Rollback()
+
+		return fmt.Errorf(
+			"delete variant images failed: %w",
+			err,
+		)
+	}
+
+	// Delete the variant itself.
+	if err := s.variantRepo.
+		WithTx(tx).
+		Delete(id); err != nil {
+
+		tx.Rollback()
+
+		return fmt.Errorf(
+			"delete variant failed: %w",
+			err,
+		)
+	}
+
+	// Recalculate product minimum price.
+	if err := s.productRepo.
+		WithTx(tx).
+		UpdateMinPrice(variant.ProductID); err != nil {
+
+		tx.Rollback()
+
+		return fmt.Errorf(
+			"update min price failed: %w",
+			err,
+		)
+	}
+
+	// Commit DB changes first.
+	if err := tx.Commit().Error; err != nil {
+		return common.ErrTransactionFailed
+	}
+
+	// DB deletion succeeded, so now remove Cloudinary assets.
+	if err := s.cldManager.DeleteByPrefix(prefix); err != nil {
+		/*
+		 * Do not return an error that makes the client think
+		 * the variant deletion failed. The database deletion
+		 * has already succeeded.
+		 *
+		 * The Cloudinary cleanup can be retried later.
+		 */
+		return fmt.Errorf(
+			"variant deleted but cloudinary cleanup failed: %w",
+			err,
+		)
 	}
 
 	return nil

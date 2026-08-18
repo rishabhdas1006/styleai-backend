@@ -41,3 +41,13 @@ func (r *CategoryRepository) FindByName(name string) (*models.Category, error) {
 	}
 	return &category, nil
 }
+
+func (r *CategoryRepository) FindByCreatedBy(userID uint) ([]models.Category, error) {
+	var categories []models.Category
+
+	err := r.db.
+		Where("created_by_id = ?", userID).
+		Find(&categories).Error
+
+	return categories, err
+}

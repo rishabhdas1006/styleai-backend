@@ -25,7 +25,14 @@ func (r *VariantRepository) Create(variant *models.ProductVariant) error {
 
 func (r *VariantRepository) FindByProductID(productID uint) ([]models.ProductVariant, error) {
 	var variants []models.ProductVariant
-	err := r.db.Where("product_id = ?", productID).Find(&variants).Error
+
+	err := r.db.
+		Preload("Images", func(db *gorm.DB) *gorm.DB {
+			return db.Order("position ASC")
+		}).
+		Where("product_id = ?", productID).
+		Find(&variants).Error
+
 	return variants, err
 }
 

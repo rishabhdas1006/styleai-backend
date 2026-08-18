@@ -17,7 +17,7 @@ func NewCategoryService(repo *repository.CategoryRepository) *CategoryService {
 	return &CategoryService{categoryRepo: repo}
 }
 
-func (s *CategoryService) CreateCategory(name string) (*models.Category, error) {
+func (s *CategoryService) CreateCategory(name string, createdByID uint) (*models.Category, error) {
 
 	existing, err := s.categoryRepo.FindByName(name)
 
@@ -30,7 +30,8 @@ func (s *CategoryService) CreateCategory(name string) (*models.Category, error) 
 	}
 
 	category := &models.Category{
-		Name: name,
+		Name:        name,
+		CreatedByID: createdByID,
 	}
 
 	err = s.categoryRepo.Create(category)
@@ -64,4 +65,8 @@ func (s *CategoryService) GetCategoryByID(id uint) (*models.Category, error) {
 	}
 
 	return category, nil
+}
+
+func (s *CategoryService) GetCategoriesByUser(userID uint) ([]models.Category, error) {
+	return s.categoryRepo.FindByCreatedBy(userID)
 }

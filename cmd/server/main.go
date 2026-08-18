@@ -25,6 +25,15 @@ func main() {
 		log.Fatalf("database initialization failed: %v", err)
 	}
 
+	switch cfg.Environment {
+	case "production":
+		gin.SetMode(gin.ReleaseMode)
+	case "testing":
+		gin.SetMode(gin.TestMode)
+	default:
+		gin.SetMode(gin.DebugMode)
+	}
+
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{

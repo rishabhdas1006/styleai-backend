@@ -83,17 +83,24 @@ func (r *CartRepository) GetCartWithItems(userID uint) (*models.Cart, error) {
 
 	err := r.db.
 		Preload("Items").
+		Preload("Items.Variant").
+		Preload("Items.Variant.Product").
+		Preload("Items.Variant.Product.Category").
+		Preload("Items.Variant.Images").
 		Where("user_id = ?", userID).
 		First(&cart).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			cart = models.Cart{UserID: userID}
+
 			if err := r.db.Create(&cart).Error; err != nil {
 				return nil, err
 			}
+
 			return &cart, nil
 		}
+
 		return nil, err
 	}
 

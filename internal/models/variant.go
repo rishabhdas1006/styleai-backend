@@ -7,7 +7,7 @@ type ProductVariant struct {
 	Size  string `gorm:"not null;uniqueIndex:idx_variant"`
 	Color string `gorm:"not null;uniqueIndex:idx_variant"`
 
-	SKU string `gorm:"uniqueIndex;not null"`
+	SKU string `gorm:"uniqueIndex:idx_variant_sku;not null"`
 
 	Price float64 `gorm:"not null"`
 	Stock int     `gorm:"not null"`

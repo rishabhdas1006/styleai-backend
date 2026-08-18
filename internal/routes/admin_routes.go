@@ -24,6 +24,7 @@ func RegisterAdminRoutes(
 	)
 
 	admin.POST("/categories", categoryHandler.CreateCategory)
+	admin.GET("/categories/my", categoryHandler.GetMyCategories)
 
 	admin.POST("/products", productHandler.CreateProduct)
 
@@ -31,5 +32,8 @@ func RegisterAdminRoutes(
 	admin.PUT("/variants/:id", variantHandler.UpdateVariant)
 	admin.DELETE("/variants/:id", variantHandler.DeleteVariant)
 
+	admin.POST("/cloudinary/product-image/signature", cloudinaryHandler.GetProductImageSignature)
+	admin.POST("/cloudinary/product-image/cleanup", cloudinaryHandler.CleanupProductImage)
 	admin.POST("/cloudinary/signature", cloudinaryHandler.GetSignature)
+	admin.POST("/cloudinary/cleanup", cloudinaryHandler.CleanupVariantImages)
 }

@@ -34,7 +34,8 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := h.categoryService.CreateCategory(req.Name)
+	userID := c.GetUint(common.ContextUserID)
+	category, err := h.categoryService.CreateCategory(req.Name, userID)
 	if err != nil {
 
 		if errors.Is(err, common.ErrCategoryExists) {
@@ -100,5 +101,21 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"category": category,
+	})
+}
+
+func (h *CategoryHandler) GetMyCategories(c *gin.Context) {
+	userID := c.GetUint(common.ContextUserID)
+
+	categories, err := h.categoryService.GetCategoriesByUser(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to get categories",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"categories": categories,
 	})
 }

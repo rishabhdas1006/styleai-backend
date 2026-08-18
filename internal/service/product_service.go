@@ -20,7 +20,16 @@ func NewProductService(repo *repository.ProductRepository) *ProductService {
 	return &ProductService{productRepo: repo}
 }
 
-func (s *ProductService) CreateProduct(name, description, brand string, categoryID uint, gender string) (*models.Product, error) {
+func (s *ProductService) CreateProduct(
+	name string,
+	description string,
+	brand string,
+	categoryID uint,
+	gender string,
+	primaryImageURL string,
+	primaryImagePublicID string,
+	createdByID uint,
+) (*models.Product, error) {
 	name = strings.TrimSpace(name)
 	description = strings.TrimSpace(description)
 	brand = strings.ToLower(strings.TrimSpace(brand))
@@ -30,12 +39,19 @@ func (s *ProductService) CreateProduct(name, description, brand string, category
 		return nil, common.ErrInvalidGender
 	}
 
+	if primaryImageURL == "" || primaryImagePublicID == "" {
+		return nil, common.ErrPrimaryImageRequired
+	}
+
 	product := &models.Product{
-		Name:        name,
-		Description: description,
-		Brand:       brand,
-		CategoryID:  categoryID,
-		Gender:      gender,
+		Name:                 name,
+		Description:          description,
+		Brand:                brand,
+		CategoryID:           categoryID,
+		Gender:               gender,
+		CreatedByID:          createdByID,
+		PrimaryImageURL:      primaryImageURL,
+		PrimaryImagePublicID: primaryImagePublicID,
 	}
 
 	err := s.productRepo.Create(product)
@@ -98,10 +114,26 @@ func (s *ProductService) GetProducts(filter dto.GetProductsQuery) (*dto.ProductL
 		return nil, err
 	}
 
+	productItems := make([]dto.ProductListItem, 0, len(products))
+
+	for _, product := range products {
+		productItems = append(productItems, dto.ProductListItem{
+			ID:              product.ID,
+			Name:            product.Name,
+			Description:     product.Description,
+			Brand:           product.Brand,
+			CategoryID:      product.CategoryID,
+			CategoryName:    product.Category.Name,
+			Gender:          product.Gender,
+			MinPrice:        product.MinPrice,
+			PrimaryImageURL: product.PrimaryImageURL,
+		})
+	}
+
 	totalPages := int64(math.Ceil(float64(total) / float64(filter.Limit)))
 
 	return &dto.ProductListResponse{
-		Products:   products,
+		Products:   productItems,
 		Page:       filter.Page,
 		Limit:      filter.Limit,
 		Total:      total,

@@ -27,6 +27,8 @@ var (
 
 	ErrOrderNotFound = errors.New("order not found")
 
+	ErrPrimaryImageRequired = errors.New("primary image is required")
+
 	ErrInvalidImageData   = errors.New("invalid image data")
 	ErrImageUploadFailed  = errors.New("image upload failed")
 	ErrImageCleanupFailed = errors.New("image cleanup failed")

@@ -28,8 +28,8 @@ type CreateVariantRequest struct {
 	VariantID string         `json:"variantId" binding:"required"`
 	Size      string         `json:"size" binding:"required"`
 	Color     string         `json:"color" binding:"required"`
-	Price     float64        `json:"price" binding:"required"`
-	Stock     int            `json:"stock" binding:"required"`
+	Price     float64        `json:"price" binding:"gt=0"`
+	Stock     int            `json:"stock" binding:"gte=0"`
 	Images    []ImageRequest `json:"images"`
 }
 
