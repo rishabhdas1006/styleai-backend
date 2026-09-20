@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"styleai-backend/internal/server"
+	"styleai-backend/pkg/server"
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"styleai-backend/internal/database"
-	"styleai-backend/internal/server"
+	"styleai-backend/pkg/server"
 )
 
 func main() {
