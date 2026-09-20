@@ -43,6 +43,9 @@ func LoadConfig() *Config {
 
 	if env == "" {
 		env = "dev"
+		if os.Getenv("VERCEL") != "" {
+			env = "production"
+		}
 	}
 
 	configName := fmt.Sprintf("config.%s", env)
