@@ -54,16 +54,23 @@ func LoadConfig() *Config {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("configs")
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Fatal("Error reading config:", err)
+	cfg := Config{
+		Environment: env,
+		Server: ServerConfig{
+			Port: "8080",
+		},
+		Database: DatabaseConfig{
+			Port:       5432,
+			DBName:     "postgres",
+			SSLMode:    "require",
+			AutoCreate: false,
+		},
 	}
 
-	var cfg Config
-
-	err = viper.Unmarshal(&cfg)
-	if err != nil {
-		log.Fatal("Unable to decode config:", err)
+	if err := viper.ReadInConfig(); err != nil {
+		log.Printf("config file unavailable, using environment variables: %v", err)
+	} else if err := viper.Unmarshal(&cfg); err != nil {
+		log.Printf("unable to decode config file, using environment variables: %v", err)
 	}
 
 	cfg.Database.Password = os.Getenv("DB_PASSWORD")
@@ -92,9 +99,10 @@ func LoadConfig() *Config {
 	if dbPort := os.Getenv("DB_PORT"); dbPort != "" {
 		port, err := strconv.Atoi(dbPort)
 		if err != nil {
-			log.Fatalf("invalid DB_PORT: %v", err)
+			log.Printf("invalid DB_PORT %q, using %d", dbPort, cfg.Database.Port)
+		} else {
+			cfg.Database.Port = port
 		}
-		cfg.Database.Port = port
 	}
 
 	return &cfg
