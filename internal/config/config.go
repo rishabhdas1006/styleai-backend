@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -79,6 +80,18 @@ func LoadConfig() *Config {
 
 	if user := os.Getenv("DB_USER"); user != "" {
 		cfg.Database.User = user
+	}
+
+	if dbName := os.Getenv("DB_NAME"); dbName != "" {
+		cfg.Database.DBName = dbName
+	}
+
+	if dbPort := os.Getenv("DB_PORT"); dbPort != "" {
+		port, err := strconv.Atoi(dbPort)
+		if err != nil {
+			log.Fatalf("invalid DB_PORT: %v", err)
+		}
+		cfg.Database.Port = port
 	}
 
 	return &cfg

@@ -4,51 +4,29 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"styleai-backend/internal/config"
 	"styleai-backend/internal/database"
-	"styleai-backend/internal/routes"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
+	"styleai-backend/internal/server"
 )
 
 func main() {
-	cfg := config.LoadConfig()
-
-	log.Printf("Starting StyleAI Backend (%s)", cfg.Environment)
-
-	if err := database.Init(cfg); err != nil {
-		log.Fatalf("database initialization failed: %v", err)
+	app, err := server.Handler()
+	if err != nil {
+		log.Fatalf("server initialization failed: %v", err)
 	}
 
-	switch cfg.Environment {
-	case "production":
-		gin.SetMode(gin.ReleaseMode)
-	case "testing":
-		gin.SetMode(gin.TestMode)
-	default:
-		gin.SetMode(gin.DebugMode)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
-
-	r := gin.Default()
-
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.Server.FrontendURL},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
-
-	routes.RegisterRoutes(r, cfg)
 
 	server := &http.Server{
-		Addr:              ":" + cfg.Server.Port,
-		Handler:           r,
+		Addr:              ":" + port,
+		Handler:           app,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -75,7 +53,7 @@ func main() {
 		}
 	}()
 
-	log.Printf("Server started on port %s", cfg.Server.Port)
+	log.Printf("Server started on port %s", port)
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed to start: %v", err)
