@@ -43,9 +43,6 @@ func LoadConfig() *Config {
 
 	if env == "" {
 		env = "dev"
-		if os.Getenv("VERCEL") != "" {
-			env = "production"
-		}
 	}
 
 	configName := fmt.Sprintf("config.%s", env)
@@ -54,23 +51,16 @@ func LoadConfig() *Config {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("configs")
 
-	cfg := Config{
-		Environment: env,
-		Server: ServerConfig{
-			Port: "8080",
-		},
-		Database: DatabaseConfig{
-			Port:       5432,
-			DBName:     "postgres",
-			SSLMode:    "require",
-			AutoCreate: false,
-		},
+	err := viper.ReadInConfig()
+	if err != nil {
+		log.Fatal("Error reading config:", err)
 	}
 
-	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("config file unavailable, using environment variables: %v", err)
-	} else if err := viper.Unmarshal(&cfg); err != nil {
-		log.Printf("unable to decode config file, using environment variables: %v", err)
+	var cfg Config
+
+	err = viper.Unmarshal(&cfg)
+	if err != nil {
+		log.Fatal("Unable to decode config:", err)
 	}
 
 	cfg.Database.Password = os.Getenv("DB_PASSWORD")
